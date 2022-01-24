@@ -1,0 +1,203 @@
+nest.js는 따로 작업폴더에 npm init을 해서 package.json을 만들 필요가 없음
+
+npm i -g @nestjs/cli  //nest.js 관련 모든 필요한 패키지를 다운로드 (기왕이면 작업폴더에서)
+그런 이후, nest new 입력 => 새로운 프로젝트 이름을 묻는다. 입력하고
+어떤 패키지 매니저를 사용할건지 물어보면 npm 선택하면 => 필요한 패키지를 다운로드함
+ => 이것만 진행해도 package.json, tsconfig.json, typescript, 폴더 분기가 다 알아서 된다
+
+npm install --save @nestjs/typeorm typeorm mysql2
+ : typeorm과 mysql을 package.json에 설치
+
+작업폴더로 이동해서 npm run start:dev 입력하면 서버가 실행되고 (package.json 참조) 기본값인 localhost:3000으로 접속하면 hello world 뜬다
+(이 내용은 src 폴더 내의 main, service, controller, module 등에 따라서...자세한 사용방법은 이제 배울 것)
+-------------------------------------------------------------------------------------------------------------------------
+
+nest.js 파일과 구조 파악
+
+  ㅇ main -> module -> controller -> service (여기서 hello world 출력하는 함수)
+   - main.ts는 모든 모듈의 root인 AppModule을 불러내고, listen을 통해 포트를 설정
+     (무조건 필요하고 심지어는 파일명도 변경해서는 안됨)
+   - AppModule 모든 모듈과 controller와 service들을 불러낸다
+   - controller는 url 라우팅하고 service의 함수를 불러낸다 => node.js에서의 routes 역할
+     또한 req.body에 데이터를 받아서, 또는 querystring으로 뭘 받아서 service로 넘기는 역할도 한다
+   - service는 실제 로직을 담당하는 함수와 코드를 구현한다. (db와 상호작용하는 것도 서비스에서) => node.js에서의 controller 역할
+      * service : 클래스이고 함수를 가지고 있다
+
+  ㅇ 데코레이터 : nest.js에서 @와 같이 사용하는 것을 일컫는 말
+   - 데코레이터는 클래스에 함수 기능을 추가 (클래스 위의 함수, 클래스를 위해 움직인다고 생각하면 됨)
+
+
+  nest cli를 통해 명령어 만으로도 일일이 구조 폴더를 만들지 않고 간단하게 생성할 수 있다
+   - 가령, controller를 만들어야하면 nest generate controller movie 이런식으로 하면 movie 컨트롤러를 담는 폴더와 파일 생성
+
+   url 구조 : 포트번호/controller_정의된_이름/controller_내부의_http메소드의_url
+    => controller에 정의된 이름을 빈 괄호로 두면 바로 다름 순서의 url로 이어진다.
+    @Controller()                           @Controller('movies')
+    export class MoviesController {         export class MoviesController {
+        @Get()                                  @Get('/list')
+        getAll(){                               getAll(){
+            return 'get all movies';                return 'get all movies';
+        }                                       }
+    } => 이경우는 localhost:3000/             } => 이 경우는 localhost:3000/movies/list
+
+
+express에서는 결과값이나 데이터를 json 형식으로 받기 위해서는 설정을 했어야 하지만 nest.js에서는 자동적으로 설정되어져 있다
+
+
+다양한 데코레이터
+
+@HttpCode(숫자) : 내가 원하는 http 코드를 전달  === req.status(숫자)
+@Request()  === req
+@Response(), @Res() === res
+@Next() === next
+@Session() === req.session
+@Param() === req.params
+@Body() === req.body
+@Query() === req.query
+@Headers === req.headers
+
+
+
+
+dto (data transfer object) : nest.js에서 타입스크립트를 사용하는 경우 사용
+ -> 각 계층(컨트롤러, 뷰 등) 간의 데이터 교환을 위한 객체
+   : DB에서 데이터를 얻어 service나 controller 등으로 보낼 때 사용하는 객체
+     = 데이터가 네트워크를 통해 전송되는 방법을 정의하는 객체
+ ->  export class CreateCatDto {
+        id: number;
+        name: string;
+        age: number
+     }
+     이런 식으로 별도의 dto  파일로 타입을 정의해서 컨트롤러, 서비스 등에서 불러와서 사용
+
+
+
+파이프 (pipe) : 라우팅 메소드들이 호출되기 전에 그 인자와 반환값을 조작
+              -> 그 과정에서 dto 등의 유효성을 검사하고, 변환 작업을 수행
+  * 파이프는 @Injectable() 데코레이터로 주석이 달린 클래스
+  * 파이프는 미들웨어 같은 것이다. / 사용하려면 import 해야 함
+ 
+ - 파이프 사용하는 방법 : Handler-level pipes / parameter-level-pipes / global-level-pipes
+  1. Handler-level-pipes : 핸들러 레벨에서 @UsePipes()데코레이터를 이용해서 사용
+                           파이프가 적용된 핸들러의 모든 파라미터에 적용됨 (하나의 핸들러에만 적용)
+        @Post
+        @UsePipes(pipe)        // 여기에 사용되어 createBoard 핸들러에만 적용된다
+        createBoard(            // 핸들러의 모든 파라미터에 적용
+          @Body('title') title,
+          @Body('description') description
+        ){}
+
+  2. Parameter-level-pipes : 특정한 파라미터에게만 적용이 되는 파이프 (usePipe 데코레이터 필요 없음)
+        @Post
+        createBoard(            
+          @Body('title', ParameterPipe) title, // 여기에 선언 => title에만 적용됨
+          @Body('description') description
+        ){}
+  3. Global-level-pipes : 어플리케이션 레벨의 파이프 => 클라이언트에서 들어오는 모든 요청에 적용
+                          가장 상단 영역인 main.ts에 선언
+        async function bootstrap(){
+          const app = await NestFactory.create(AppModule); // 여기에 선언
+          app.useGlobalPipes(GlobalPipes);
+          await app.listen(3000);
+        }                        
+        bootstrap(); 
+
+  * nest.js에서 기본제공되는 built-in 파이프   
+   - validationPipe
+      : 보통 validationPipe는 class-validator class-transformer와 같이 사용한다.
+        이것들을 npm install로 설치 후 사용
+        이것들은 검증하는 데코레이터 (클래스에서 사용하는 함수)로서 검증한다   
+      : validationPipe를 선언(글로벌, 파라미터, 핸들러 등)한 후 여러가지 옵션 데코레이터는
+        dto의 검증이 필요한 부분에다가 선언해서 사용하면 됨 (당연히 import도 해야 하고)  
+   - ParseIntPipe
+   - ParseBoolPipe
+   - ParseArrayPipe
+   - ParseUUIDPipe
+   - DefaultValuePipe
+
+   * custom pipe 구현하기
+    ㅇ 내장 pipe 말고 내가 원하는 기능을 가진 파이프를 만들기 위해서는 먼저
+      - Pipe Transform이란 인터페이스를 새롭게 만들 커스텀 파이프에 구현해야 함
+        : Pipe Transform 인터페이스는 모든 파이프에서 구현해줘야 한다.
+      - 또한, 모든 파이프는 transform() 메소드가 필요 => nest.js가 인자를 처리하기 위해 사용
+      - 보통 커스텀 파이프는 하나의 클래스이기 때문에 새로운 폴더에 모아 놓는 경우가 많음  
+        
+        
+        
+        export class AbcdePipe implements PipeTransform { 
+                                       // 항상 PipeTransform을 implement 한다
+
+        }
+
+        export class BoardStatusValidationPipe implements PipeTransform {
+          transform(value: any, metadata: ArgumentMetadata) {
+            // 이렇게 transform() 메소드는 2개 파라미터로 구성됨
+            console.log('value', value)
+            console.log('metadata', metadata)
+
+            return value;
+          }
+        }
+        ㅇ transform() 메소드 : 두 개의 파라미터를 가짐
+          - 첫번째 파라미터는 처리가 된 인자의 값(value)
+          - 두번째 파라미터는 인자에 대한 메타데이터를 포함한 객체
+         : tramsform() 메소드에서 리턴된 값은 Route 핸들러로 전해지며 만약 예외가 
+           발생하면 클라이언트에 바로 전해짐
+
+
+ - NotFoundException : nest.js에 내장되어 있는 예외처리를 위한 객체
+        if(!movie){
+            throw new NotFoundException(`not found movie with id:${id}`)
+        }
+        return movie;  
+
+
+
+
+ㅇ typeorm과 데이터베이스 같이 사용 시 : 먼지 npm install로 데이터베이스와 typeorm 설치
+   npm install --save @nestjs/typeorm typeorm mysql2
+  - typeorm과 데이터베이스를 연결해야 한다
+    : typeorm.config.ts 파일을 만들어서 거기에 설정한다  
+        export const typeORMConfig : TypeOrmModuleOptions = {
+          type: 'mysql',  // 기타 데이터베이스도 가능. 이거는 예시
+          host: 'localhost', 
+          port: 13306,
+          username: 'j21chon',
+          password: 'hello',
+          database: 'inflearn_nest',
+          entities: [__dirname + '/../**/*.entity.{js,ts}'],
+          synchronize: true
+        }
+      * entity를 통해 class를 생성하고 그 클래스에 컬럼을 정의하줌으로써 데이터베이스 테이블을
+        생성할 수 있는 것
+          -> 위처럼 entity를 정의한 파일의 경로에 entity 파일을 만들고 entity를 정의한다. 
+             entity 생성에는 다양한 데코레이터를 사용
+            @Entity() : 해당 클래스가 entity임을 나타낸다 = CREATE TABLE 역할
+            @PrimaryGeneratedColumn() : 해당 컬럼이 primary key임을 지정
+            @Column() : 해당 entity (table)의 각각의 컬럼을 지정
+
+  - 위의 파일에 설정한 값을 app.module.ts 파일 (root module)에 import 한다
+   * typeorm은 데이터베이스의 entity에 해당하는 테이블을 자동으로 생성하고 테이블 이름을
+     entity의 이름으로 지정
+ 
+  - repository : entity 개채와 함께 작동하며 entity 찾기, 삽입, 업데이트, 삭제 등을 처리
+    -> request가 오면 controller를 거쳐 service에서 처리하는데 만약에 service에서
+       처리해야 하는 로직에 데이터베이스가 필요 (CRUD 기능)하면 이는 service에서 하는게 아니고
+       repository에서 한다. (db 관련) => 이를 repository pattern이라 함
+      * service에서 repository pattern 사용하기 위해서는 service에 의존성 주입해야함 
+        야래에 생성한 repository를 주입하면 됨
+        controller에서도 service를 사용하기 위해 constructor로 가져온 것처럼
+        service에서도 constructor를 사용해서 repository를 가져오면 됨다
+    -> repository 파일을 생성해서 거기에 클래서 정의    
+    -> 생성한 repository를 다른 곳에서도 사용할 수 있게 하기 위해서 (injectable) 해당
+       repository, entity의 module.ts 에서 import 함
+       
+
+
+
+ ㅇ 유니크한 값 주기
+   예를들어, 회원가입 시 이미 username이 존재하면 가입시켜서는 안된다.
+   그럴 경우 보통 db에서 username을 조회를 먼저 하고, 없다면 데이터를 다시 db에 저장하고
+   있다면 에러를 보내는 방법인데 이것은 => 데이터베이스 처리를 두 번 해야 함
+     -> 데이터베이스 레벨에서 에러를 던져주는 방법이 있다
+        : 해당 entity에서 원하는 유니크한 값을 원하는 필드 값을 정해준다 => @Unique() 사용      
