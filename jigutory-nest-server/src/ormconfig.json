@@ -1,13 +1,13 @@
 [
   {
-    "name": "default",
+    "name": "jigutory",
     "type": "mysql",
     "host": "jigutory.closjql9emea.us-east-2.rds.amazonaws.com",
     "port": 13306,
     "username": "admin",
     "password": "dotenv123",
-    "database": "",
-    "synchronize": false,
-    "entities": ["entities/*.js"]
+    "database": "jigutory",
+    "synchronize": true,
+    "entities": ["dist/**/*.js"]
   }
 ]
