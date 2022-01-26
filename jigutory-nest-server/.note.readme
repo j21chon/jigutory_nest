@@ -179,7 +179,25 @@ dto (data transfer object) : nest.js에서 타입스크립트를 사용하는 �
   - 위의 파일에 설정한 값을 app.module.ts 파일 (root module)에 import 한다
    * typeorm은 데이터베이스의 entity에 해당하는 테이블을 자동으로 생성하고 테이블 이름을
      entity의 이름으로 지정
- 
+
+** 데이터베이스를 생성하고 직접 entity를 하나하나 정의한 후에 synchronize 해야지 테이블이 생겨나지만, 
+   반대로 먼저 테이블을 다 만든 후에 이미 있는 db 테이블을 가지고 entity를 만들 수도 있다.
+   즉, 만얀 entity 작성이 어려우면 다른 방법으로 테이블을 먼저 다 만든 후에 entity 자동 생성하게 할 수도 있음
+  - 이미 생성되어서 존재하는 테이블을 entity 파일로 만들어주는  라이브러리를 사용하면 됨
+    => typeorm-model-generator
+       npm i -g typeorm-model-generator  : 라이브러리를 설치하고
+       아래처럼 입력해서 entity 생성 (혹시 안되면 앞에 npx 붙이기)
+       typeorm-model-generator -h server_ip -d database_name -p server_port -u server_id -x server_pw -e db_종류 -o entity_생성할_folder_경로
+        예시) typeorm-model-generator -h jigutory.closjql9emea.us-east-2.rds.amazonaws.com -d jigutory -p 13306 -u admin -x dotenv123 -e mysql -o ./src              
+// -h : host, 연결할 서버 ip
+// -d : database, 연결할 db 이름
+// -p : port, 연결할 서버 port
+// -u : user, db 사용자 id
+// -x : db 사용자 패스워드
+// -e : engine, db 종류 (mssql, postgres, mysql, mariadb, oracle, sqlite)
+// -o : out, entity 파일 생성할 폴더 경로
+
+
   - repository : entity 개채와 함께 작동하며 entity 찾기, 삽입, 업데이트, 삭제 등을 처리
     -> request가 오면 controller를 거쳐 service에서 처리하는데 만약에 service에서
        처리해야 하는 로직에 데이터베이스가 필요 (CRUD 기능)하면 이는 service에서 하는게 아니고
